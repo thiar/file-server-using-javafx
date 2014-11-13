@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import java.net.*?>
+<?import javafx.geometry.*?>
+
+<?import javafx.collections.*?>
+
+<TabPane xmlns:fx="http://javafx.com/fxml" fx:controller="clientui.FXMLDocumentController" tabClosingPolicy="UNAVAILABLE" >  
+    <tabs>
+        <Tab text="user">
+            <GridPane>
+                <padding>
+                    <Insets top="25" right="25" bottom="10" left="25"/> 
+                </padding>
+                
+                 <Label text="User aktif" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <ListView GridPane.columnIndex="0" GridPane.rowIndex="3" fx:id="listUser"/>
+            </GridPane>
+        </Tab>
+        <Tab text="setting">
+            <GridPane>
+                <padding>
+                    <Insets top="25" right="25" bottom="10" left="25"/> 
+                </padding>
+                <Label text="Nama user" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <TextField GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Label text="IP Server" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <TextField GridPane.columnIndex="0" GridPane.rowIndex="3" fx:id="ipServer" />
+                <Label text="Port Server" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                <TextField GridPane.columnIndex="0" GridPane.rowIndex="5" fx:id="portServer" />
+                <Button text="connect" GridPane.rowIndex="6" onMouseClicked="#FXMLconnect" /> 
+                <Label GridPane.columnIndex="0" GridPane.rowIndex="7" fx:id="status" />   
+            </GridPane>
+        </Tab> 
+    </tabs>
+</TabPane>
