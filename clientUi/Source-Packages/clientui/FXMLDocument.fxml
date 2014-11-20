@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.net.*?>
 <?import javafx.scene.effect.*?>
 <?import javafx.scene.*?>
 <?import java.lang.*?>
@@ -7,7 +8,9 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import java.net.URL ?>
-<TabPane prefHeight="436.0" prefWidth="305.0" tabClosingPolicy="UNAVAILABLE" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" fx:controller="clientui.FXMLDocumentController">  
+<?import javafx.collections.* ?>
+
+<TabPane prefHeight="451.0" prefWidth="305.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="clientui.FXMLDocumentController">  
     
     <tabs>
         <Tab text="user">
@@ -18,7 +21,7 @@
                    </padding>
                   <children>
                       
-                                  <Label text="User aktif" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                      <Label text="User aktif" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                       <Button onMouseClicked="#refresh" text="Refresh" GridPane.rowIndex="3" />   
                       
                       <ListView fx:id="listUser" prefHeight="261.0" prefWidth="251.0" GridPane.halignment="LEFT" GridPane.rowIndex="4" />
@@ -26,14 +29,15 @@
                      <children>   
                             <Button onMouseClicked="#send" text="Send" />
                            
-                                                          <Button onMouseClicked="#browse" text="browse" />
+                            <Button onMouseClicked="#browse" text="browse" />
                      </children>
                   </HBox>
-                  <VBox prefHeight="52.0" prefWidth="248.0" GridPane.rowIndex="9">
-                     <children>   
-                            <Label fx:id="sendStatus" />
-                     </children>
-                  </VBox>
+                  <ProgressBar fx:id="pBar" visible="false" GridPane.columnIndex="0" GridPane.rowIndex="9" /> 
+                  <Label fx:id="sendStatus" GridPane.columnIndex="0" GridPane.rowIndex="10" />
+                  <Label fx:id="sendSukses" GridPane.columnIndex="0" GridPane.rowIndex="10" />
+                 
+                   
+                 
                   </children>
                <columnConstraints>
                   <ColumnConstraints />
@@ -42,6 +46,7 @@
                   <RowConstraints />
                   <RowConstraints maxHeight="0.0" minHeight="0.0" prefHeight="0.0" />
                   <RowConstraints maxHeight="17.0" minHeight="17.0" prefHeight="17.0" />
+                  <RowConstraints />
                   <RowConstraints />
                   <RowConstraints />
                   <RowConstraints />
@@ -67,10 +72,13 @@
                       <Label text="Daftar File" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                       <Button onMouseClicked="#refreshFile" text="Refresh" GridPane.columnIndex="0" GridPane.rowIndex="3" />   
                       
-                      <ListView fx:id="listFile" prefHeight="240.0" prefWidth="248.0" GridPane.columnIndex="0" GridPane.halignment="LEFT" GridPane.rowIndex="4" />
+                      <ListView fx:id="listFile" prefHeight="300.0" prefWidth="255.0" GridPane.columnIndex="0" GridPane.halignment="LEFT" GridPane.rowIndex="4" />
                      
                       <Button onMouseClicked="#download" text="Download" GridPane.rowIndex="7" />   
                       <Label fx:id="downloadStatus" GridPane.rowIndex="8" />
+                      <Label fx:id="downloadSukses" GridPane.rowIndex="8" />
+                      <ProgressBar fx:id="pBarF" visible="false" GridPane.columnIndex="0" GridPane.rowIndex="9" /> 
+                  
                   </children>
                <columnConstraints>
                   <ColumnConstraints />
@@ -81,6 +89,7 @@
                   <RowConstraints />
                   <RowConstraints maxHeight="56.0" minHeight="30.0" prefHeight="33.0" />
                   <RowConstraints maxHeight="297.0" minHeight="271.0" prefHeight="294.0" />
+                  <RowConstraints />
                   <RowConstraints />
                   <RowConstraints />
                   <RowConstraints />
@@ -103,8 +112,33 @@
                       <TextField fx:id="ipServer" text="127.0.0.1" GridPane.columnIndex="0" GridPane.rowIndex="3" />
                       <Label text="Port Server" GridPane.columnIndex="0" GridPane.rowIndex="4" />
                       <TextField fx:id="portServer" text="9000" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-                      <Button onMouseClicked="#FXMLconnect" text="connect" GridPane.rowIndex="7" /> 
-                      <Label fx:id="status" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+                       
+                      <Label text="Masukkan speed" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+                       
+                      <VBox GridPane.columnIndex="0" GridPane.rowIndex="9">
+                           <ComboBox fx:id="speedSelected">
+                                   <items>
+                                       <FXCollections fx:factory="observableArrayList">
+                                            <String fx:value="normal" />
+                                            <String fx:value="2x" />
+                                            <String fx:value="10x" />
+                                            <String fx:value="100x" />
+                                        </FXCollections>
+                                   </items>
+                                   <value>
+                                        <String fx:value="normal" />
+                                   </value>
+                           </ComboBox>
+                           <Label />
+                           <HBox GridPane.columnIndex="0" GridPane.rowIndex="10">
+                               <Button onMouseClicked="#FXMLconnect" text="connect" />
+                               <Label text="  "/>
+                               <Button onMouseClicked="#FXMLdisconnect" text="disconnect" />
+                           </HBox>  
+                           
+                           <Label fx:id="status" />
+                      </VBox>  
+                      
                   </children>
                <columnConstraints>
                   <ColumnConstraints />
@@ -125,6 +159,6 @@
         </Tab> 
     </tabs>
     <stylesheets>
-        <URL value="@style.css"/>
+        <URL value="@style.css" />
     </stylesheets>
 </TabPane>
