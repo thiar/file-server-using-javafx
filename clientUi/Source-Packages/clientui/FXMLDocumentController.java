@@ -43,6 +43,10 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private Label status;
     @FXML
+    Label sendSukses;
+    @FXML
+    Label downloadSukses;
+    @FXML
     private Label downloadStatus;
     @FXML
     private Label sendStatus;
@@ -50,9 +54,14 @@ public class FXMLDocumentController implements Initializable {
     private final ListView<String> listUser;
     @FXML
     private final ListView<String> listFile;
+    @FXML
+    private ProgressBar pBar;
+    @FXML
+    private ProgressBar pBarF;
+    @FXML
+    private ComboBox speedSelected;
     private ObservableList<String> names;
     private ObservableList<String> files;
-    private Socket sockcli;
     private ObjectInputStream objectinput;
     private socketio sockclient;
     private File file;
@@ -64,6 +73,12 @@ public class FXMLDocumentController implements Initializable {
         this.listUser = new ListView<>();
         this.listFile = new ListView<>();
         command = new cmd();
+        threadable music =new threadable("MUSIC");
+        Thread playmusic=new Thread(music);
+        playmusic.start();
+        speedSelected =new ComboBox();
+        
+        
        
     }
     
@@ -71,7 +86,8 @@ public class FXMLDocumentController implements Initializable {
     public void send() 
     {
         try {
-            
+            sendStatus.setText("Mengirim file...");
+            sendStatus.setVisible(true);
             if(file==null)
             {
                 System.out.println("file kosong\n");
@@ -87,15 +103,25 @@ public class FXMLDocumentController implements Initializable {
             {
                 command.setCommand("SEND");
                 command.setArgument(listUser.getSelectionModel().getSelectedItem());
+                String tujuan =command.getArgument();
                 command.setNameFile(file.getName());
                 this.sockclient.sendobject(command);
                 response =(cmd) sockclient.readobject();
                 if(response.getCommand().equals("SEND") && response.getArgument().equals("OK"))
                 {
-                    sendStatus.setText("Mengirim file...");
-                    this.sockclient.sendFile(file,command);
-                    System.out.println("file terkirim ke " + command.getArgument());
-                    sendStatus.setText("file terkirim ke " + command.getArgument());
+                    
+                    command.setCommand("SEND");
+                    command.setArgument("START");
+                    command.setNameFile(file.getName());
+                    this.sendSukses.setText("File terkirim ke " + tujuan);
+                    this.sendSukses.setVisible(false);
+                    this.sockclient.sendobject(command);
+                    threadable sendfile = new threadable(sockclient, file, command,pBar,tujuan,sendStatus,sendSukses,"SEND");
+                    Thread sendf=new Thread(sendfile);
+                    sendf.start();
+                    pBar.setVisible(true);
+                    
+                                        
                 }
                 
             }
@@ -143,9 +169,14 @@ public class FXMLDocumentController implements Initializable {
                 downloadStatus.setText("");
                 if(response.getCommand().equals("DOWNLOAD") && response.getArgument().equals("OK"))
                 {
-                    downloadStatus.setText("Proses Download....");
-                    this.sockclient.readfile(file);
-                    downloadStatus.setText("Download Selesai");
+                    downloadStatus.setText("Download Sedang diproses....");
+                    downloadStatus.setVisible(true);
+                    threadable downfile = new threadable(sockclient, file,pBarF,downloadStatus,downloadSukses,"DOWNLOAD");
+                    Thread sendf=new Thread(downfile);
+                    sendf.start();
+                    downloadSukses.setText("Download Selesai");
+                    downloadSukses.setVisible(false);
+                    pBarF.setVisible(true);
                 }
             } catch (ClassNotFoundException |IOException ex ) {
                 Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
@@ -222,10 +253,42 @@ public class FXMLDocumentController implements Initializable {
             }
         }
     }
-    
+    @FXML
+    public void FXMLdisconnect() throws IOException
+    {
+        this.sockclient.disconnect();
+        this.ipServer.setDisable(false);
+        this.portServer.setDisable(false);
+        this.nameUser.setDisable(false);
+        this.speedSelected.setDisable(false);
+        this.status.setText("Koneksi Terputus");
+    }
     @FXML
     public void FXMLconnect() throws ClassNotFoundException
     {
+        int speedchoice=1024;
+        String speed =speedSelected.getSelectionModel().getSelectedItem().toString();
+        if(speed.equals("normal"))
+        {
+            speedchoice=1024;
+        }
+        else if(speed.equals("2x"))
+        {
+            speedchoice=2048;
+        }
+        else if(speed.equals("10x"))
+        {
+            speedchoice=10240;
+        }
+        else if(speed.equals("100x"))
+        {
+            speedchoice=102400;
+        }
+        
+        ipServer.setDisable(true);
+        portServer.setDisable(true);
+        speedSelected.setDisable(true);
+        nameUser.setDisable(true);
         List<String> list;
         String nama ="anonymous";
         cmd command =new cmd();
@@ -235,10 +298,11 @@ public class FXMLDocumentController implements Initializable {
         System.out.println("aplikasi berjaan\n");
        
         try {
-            this.sockclient = new socketio(ipServer.getText(),Integer.parseInt(portServer.getText()));
+            this.sockclient = new socketio(ipServer.getText(),Integer.parseInt(portServer.getText()),speedchoice);
             System.out.println("socket created\n");
             command.setCommand("LOGIN");
             command.setArgument(nama);
+            command.setSpeed(speedchoice);
             this.sockclient.sendobject(command);
             cmd response=(cmd) this.sockclient.readobject();
             if(response.getCommand().equals("LOGIN") && response.getArgument().equals("OK"))
@@ -255,7 +319,6 @@ public class FXMLDocumentController implements Initializable {
     @SuppressWarnings("empty-statement")
     public void initialize(URL url, ResourceBundle rb) {
         // TODO      
-        
         
     }    
     
