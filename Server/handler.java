@@ -85,16 +85,40 @@ public class handler implements Runnable{
         
     }
     
-    public void readfile(cmd request) throws IOException
+    public void readfile(String userTujuan) throws IOException, ClassNotFoundException
     {
+        cmd request=(cmd) this.objectinput.readObject();
+        FileOutputStream fos = new FileOutputStream("cache" + "\\" + userTujuan + "\\" + request.getNameFile());
         
-        FileOutputStream fos = new FileOutputStream("cache" + "\\" + request.getArgument() + "\\" + request.getNameFile());
-        BufferedOutputStream bos = new BufferedOutputStream(fos);
         
-        bos.write(request.getBytefile());
+        if(request.getCommand().equals("SEND") && request.getArgument().equals("FAILED"))
+        {
+            System.out.println("SEND CANCELED");
+        }
+        else
+        {
+            cmd file =new cmd();
+            if(request.getCommand().equals("SEND") && request.getArgument().equals("START"))
+            {
+                while((file=(cmd) this.objectinput.readObject())!=null)
+                {
+                    if(file.getCommand().equals("SEND") && file.getArgument().equals("FINISH"))
+                    {
+                        System.out.println("File tersimpan");
+                        break;
+                    }
+                    
+                    fos.write(file.getBytefile());
+                    System.out.println(file.getBytefile());
+                }
+                
+            }
+            
+        }
+        
         System.out.println("file has writen\n");
 
-        bos.close();
+        fos.close();
     }
     public void createDefFile(cmd request) throws FileNotFoundException, IOException
     {
@@ -109,19 +133,30 @@ public class handler implements Runnable{
     }
     
      public void sendFile(File inputFile,cmd request) throws IOException{
-        FileInputStream FileInput;
+        FileInputStream fis;
         cmd file=new cmd();
+        file.setCommand("SEND");
+        file.setArgument("START");
+        file.setNameFile(inputFile.getName());
+        this.sendobject(file);
+        
         file.setNameFile(inputFile.getName());
         file.setArgument(request.getArgument());
         file.setFile(inputFile);
-        byte[] bytefile= new byte[(int) inputFile.length()];
-        
+        byte[] bytefile= new byte[1024];
+        int byteread;
         try {
-            FileInput =new FileInputStream(inputFile);
-            BufferedInputStream is= new BufferedInputStream(FileInput);
-            is.read(bytefile,0,bytefile.length);
-            file.setBytefile(bytefile);
-            System.out.println(bytefile);
+            fis=new FileInputStream(inputFile);
+           
+            while((byteread = fis.read(bytefile)) >=0)
+            {
+                file.setBytefile(bytefile);
+                this.sendobject(file);
+                System.out.println(bytefile);
+
+            }
+            file.setCommand("SEND");
+            file.setArgument("FINISH");
             this.sendobject(file);
             System.out.println("file has been send");
 
@@ -158,18 +193,8 @@ public class handler implements Runnable{
                     new File("cache" + "\\" + request.getArgument()).mkdir();
                     this.createDefFile(request);
                     this.sendobject(command);
-
-                    cmd file=(cmd) this.objectinput.readObject();
-                    if(file.getCommand().equals("SEND") && file.getArgument().equals("FAILED"))
-                    {
-                        System.out.println("SEND CANCELED");
-                    }
-                    else
-                    {
-                        System.out.println(file.getNameFile());
-                        System.out.println(file.getBytefile().length);
-                        this.readfile(file);
-                    }
+                    this.readfile(request.getArgument());
+                    
                     
 
                 }
@@ -217,9 +242,7 @@ public class handler implements Runnable{
             this.objectinput.close();
         } catch (IOException ex) {
             Logger.getLogger(handler.class.getName()).log(Level.SEVERE, null, ex);
-        }
-            
-            
+        }    
         System.out.println("end of connection\n");          
        
     }
