@@ -24,6 +24,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.scene.control.Label;
+
 
 /**
  *
@@ -34,14 +36,15 @@ public class socketio {
     private ObjectOutputStream objectoutput;
 
     private Socket socketcli;
+    private int speed =1024;
     
-    public socketio(String Ip,int port) throws IOException
+    public socketio(String Ip,int port,int speed) throws IOException
     {
         
             this.socketcli= new Socket(Ip,port);            
             this.objectoutput=new ObjectOutputStream(this.socketcli.getOutputStream());
             this.objectinput=new ObjectInputStream(this.socketcli.getInputStream());
-                   
+            this.speed=speed;
         
     }
     
@@ -52,13 +55,36 @@ public class socketio {
     }
     public void readfile(File inputFile) throws IOException, ClassNotFoundException
     {
-        cmd file= (cmd) this.readobject();
+        cmd request= (cmd) this.readobject();
         FileOutputStream fos = new FileOutputStream(inputFile);
-        BufferedOutputStream bos = new BufferedOutputStream(fos);
+        if(request.getCommand().equals("SEND") && request.getArgument().equals("FAILED"))
+        {
+            System.out.println("SEND CANCELED");
+        }
+        else
+        {
+            cmd file =new cmd();
+            if(request.getCommand().equals("SEND") && request.getArgument().equals("START"))
+            {
+                while((file=(cmd) this.objectinput.readObject())!=null)
+                {
+                    if(file.getCommand().equals("SEND") && file.getArgument().equals("FINISH"))
+                    {
+                        System.out.println("File tersimpan");
+                        break;
+                    }
+                    
+                    fos.write(file.getBytefile());
+                    System.out.println(file.getBytefile());
+                }
+                
+            }
+            
+        }
         
-        bos.write(file.getBytefile());
         System.out.println("file has writen\n");
-        bos.close();
+
+        fos.close();
     }
     public void sendFile(File inputFile,cmd command) throws IOException,OutOfMemoryError{
         FileInputStream FileInput;
@@ -68,16 +94,21 @@ public class socketio {
         file.setCommand(command.getCommand());
         file.setFile(inputFile);
         
-        byte[] bytefile= new byte[(int) inputFile.length()];
+        byte[] bytefile= new byte[this.speed];
+        int byteread;
+        FileInputStream fis =new FileInputStream(inputFile);
         
-        
-        
-        FileInput =new FileInputStream(inputFile);
-        BufferedInputStream is= new BufferedInputStream(FileInput);
-        is.read(bytefile,0,bytefile.length);
-        file.setBytefile(bytefile);
-        System.out.println(bytefile);
+        while((byteread = fis.read(bytefile)) >=0)
+        {
+            file.setBytefile(bytefile);
+            this.sendobject(file);
+            System.out.println(bytefile);
+            
+        }
+        file.setCommand("SEND");
+        file.setArgument("FINISH");
         this.sendobject(file);
+        System.out.println("file terkirim");
 
         
     }
@@ -87,7 +118,12 @@ public class socketio {
         this.objectoutput.flush();
         this.objectoutput.reset();       
     }
-    
+    public void disconnect() throws IOException
+    {
+        this.objectinput.close();
+        this.objectoutput.close();
+        this.socketcli.close();
+    }
     public Object readobject() throws IOException, ClassNotFoundException
     {
         return this.objectinput.readObject();
