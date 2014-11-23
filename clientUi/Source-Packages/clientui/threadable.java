@@ -79,6 +79,7 @@ public class threadable implements Runnable{
                 this.pBar.setVisible(false);
                 this.Status.setVisible(false);
                 this.Sukses.setVisible(true);
+                playMusic("coc.mp3");
             } catch (IOException ex) {
                 Logger.getLogger(threadable.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -90,6 +91,7 @@ public class threadable implements Runnable{
                 this.pBar.setVisible(false);
                 this.Status.setVisible(false);
                 this.Sukses.setVisible(true);
+                playMusic("coc.mp3");
             } catch (IOException ex) {
                 Logger.getLogger(threadable.class.getName()).log(Level.SEVERE, null, ex);
             } catch (ClassNotFoundException ex) {
