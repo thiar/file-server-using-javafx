@@ -7,24 +7,14 @@
 package clientui;
 
 import cmd.cmd;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javafx.scene.control.Label;
 
 
 /**
@@ -45,13 +35,23 @@ public class socketio {
             this.objectoutput=new ObjectOutputStream(this.socketcli.getOutputStream());
             this.objectinput=new ObjectInputStream(this.socketcli.getInputStream());
             this.speed=speed;
-        
+            if(speed>this.socketcli.getSendBufferSize())this.socketcli.setSendBufferSize(speed);
+            if(speed>this.socketcli.getReceiveBufferSize())this.socketcli.setReceiveBufferSize(speed);
     }
     
-    public String getName()
+    public ArrayList<cmd> getListUser() throws IOException, ClassNotFoundException
     {
-        String name = this.socketcli.getInetAddress().toString() + "-" + this.socketcli.getPort();
-        return name;
+        ArrayList<cmd> allUser;
+        allUser=(ArrayList<cmd>) this.readobject();
+        System.out.println(allUser.get(0).getIp());
+        return allUser;
+    }
+    public ArrayList<cmd> getListFile() throws IOException, ClassNotFoundException
+    {
+        ArrayList<cmd> allFile;
+        allFile=(ArrayList<cmd>) this.readobject();
+        System.out.println(allFile.get(0).getIp());
+        return allFile;
     }
     public void readfile(File inputFile) throws IOException, ClassNotFoundException
     {
@@ -66,6 +66,8 @@ public class socketio {
             cmd file =new cmd();
             if(request.getCommand().equals("SEND") && request.getArgument().equals("START"))
             {
+                long start =System.currentTimeMillis();
+                int i=0;
                 while((file=(cmd) this.objectinput.readObject())!=null)
                 {
                     if(file.getCommand().equals("SEND") && file.getArgument().equals("FINISH"))
@@ -75,8 +77,10 @@ public class socketio {
                     }
                     
                     fos.write(file.getBytefile());
-                    System.out.println(file.getBytefile());
+                    i++;
+                    //System.out.println(file.getBytefile());
                 }
+                System.out.println(System.currentTimeMillis()- start + " "  +i);
                 
             }
             
@@ -102,7 +106,7 @@ public class socketio {
         {
             file.setBytefile(bytefile);
             this.sendobject(file);
-            System.out.println(bytefile);
+            //System.out.println(bytefile);
             
         }
         file.setCommand("SEND");
