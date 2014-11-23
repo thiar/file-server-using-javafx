@@ -14,9 +14,21 @@ root {
 .root {
 -fx-background-image: url("background.jpg");
 }
+.progress-bar > .bar {
+    -fx-background-color: linear-gradient(
+        from 0px .75em to .75em 0px,
+        repeat,
+        -fx-accent 0%,
+        -fx-accent 49%,
+        derive(-fx-accent, 30%) 50%,
+        derive(-fx-accent, 30%) 99%
+    );
+}
 #pane{
 -fx-background-image: url("background.jpg");
 }
+
+
 .label {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
