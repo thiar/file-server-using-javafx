@@ -58,7 +58,7 @@ public class handler implements Runnable{
     
     public synchronized void ListUser() throws IOException
     {
-        tArrayList<cmd> alluser = new ArrayList<>();
+        ArrayList<cmd> alluser = new ArrayList<>();
         
         
         for(int i=0;i<this.alhandler.size();i++)
@@ -78,16 +78,16 @@ public class handler implements Runnable{
     }
     public void ListFile() throws IOException
     {
-       File[] files = new File("cache\\" + this.addr).listFiles();
+        File[] files = new File("cache\\" + this.addr).listFiles();
         List<String> results = new ArrayList<>();
         ArrayList<cmd> allfile = new ArrayList<>();
         
         for (File file : files) {
             if (file.isFile()) {
-                //results.add(file.getName());
+                
                 cmd thefile=new cmd();
                 thefile.setNameFile(file.getName());
-                System.out.println(file.getName());
+                
                 thefile.setFileSize(readableFileSize(file.length()));
                 thefile.setLastModified(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(file.lastModified()));
                 allfile.add(thefile);
@@ -101,7 +101,7 @@ public class handler implements Runnable{
         int digitGroups = (int) (Math.log10(size)/Math.log10(1024));
         return new DecimalFormat("#,##0.#").format(size/Math.pow(1024, digitGroups)) + " " + units[digitGroups];
     }
-   public void sendobject(Object objeckKirim) throws IOException
+    public void sendobject(Object objeckKirim) throws IOException
     {
         this.objectoutput.writeObject(objeckKirim);
         this.objectoutput.flush();
@@ -144,10 +144,60 @@ public class handler implements Runnable{
 
         fos.close();
     }
-    public void createDefFile(cmd request) throws FileNotFoundException, IOException
+    
+    public void readBroadcastfile() throws IOException, ClassNotFoundException
+    {
+        cmd request=(cmd) this.objectinput.readObject();
+        ArrayList<FileOutputStream> alfos = new ArrayList<>();
+        synchronized(alhandler)
+        {
+            for(int i=0;i<alhandler.size();i++)
+            {
+                FileOutputStream fos = new FileOutputStream("cache" + "\\" + alhandler.get(i).addr + "\\" + request.getNameFile());
+                alfos.add(fos);
+            } 
+        }
+        
+        if(request.getCommand().equals("SEND") && request.getArgument().equals("FAILED"))
+        {
+            System.out.println("SEND CANCELED");
+        }
+        else
+        {
+            cmd file;
+            if(request.getCommand().equals("SEND") && request.getArgument().equals("START"))
+            {
+                while((file=(cmd) this.objectinput.readObject())!=null)
+                {
+                    if(file.getCommand().equals("SEND") && file.getArgument().equals("FINISH"))
+                    {
+                        System.out.println("File tersimpan");
+                        break;
+                    }
+                    
+                    for(int i=0;i<alfos.size();i++)
+                    {
+                        alfos.get(i).write(file.getBytefile());
+                    }
+                    //System.out.println(file.getBytefile());
+                }
+                
+            }
+            
+        }
+        
+        System.out.println("file has writen\n");
+
+        for(int i=0;i<alfos.size();i++)
+        {
+            alfos.get(i).close();
+        }
+    }
+    
+    public void createDefFile(String namaTujuan) throws FileNotFoundException, IOException
     {
         
-        FileOutputStream fos = new FileOutputStream("cache" + "\\" + request.getArgument() + "\\" + "ini tempat menyimpan file.txt");
+        FileOutputStream fos = new FileOutputStream("cache" + "\\" + namaTujuan + "\\" + "ini tempat menyimpan file.txt");
         BufferedOutputStream bos = new BufferedOutputStream(fos);
         
         bos.write("ini folder penyimpanan file anda".getBytes());
@@ -200,7 +250,7 @@ public class handler implements Runnable{
             {
 
                 System.out.println(request.getCommand() + " " +  request.getArgument());
-                
+              
                 if(request.getCommand().equals("LIST") && request.getArgument().equals("USER"))
                 {
                     command = new cmd();
@@ -214,12 +264,33 @@ public class handler implements Runnable{
                     command = new cmd();
                     command.setCommand("SEND");
                     command.setArgument("OK");
-                    new File("cache" + "\\" + request.getArgument()).mkdir();
-                    this.createDefFile(request);
-                    this.sendobject(command);
-                    this.readfile(request.getArgument());
+                    
+                    if(request.getArgument().equals("BROADCAST"))
+                    {
+                        synchronized(this.alhandler)
+                        {
+                            for(int i=0;i<alhandler.size();i++)
+                            {
+                                new File("cache" + "\\" + alhandler.get(i).addr).mkdir();
+                                this.createDefFile(alhandler.get(i).addr);
+                            }
+                            
+                        }
+                        this.sendobject(command);
+                        System.out.println("Broadcast ready");
+                        this.readBroadcastfile();
+                    }
+                    else
+                    {
+                        new File("cache" + "\\" + request.getArgument()).mkdir();
+                        this.createDefFile(request.getArgument());
+                        this.sendobject(command);
+                        this.readfile(request.getArgument());  
+                    }
                     
                     
+                    
+                                     
 
                 }
                 else if(request.getCommand().equals("LOGIN"))
@@ -228,7 +299,7 @@ public class handler implements Runnable{
                     command.setCommand("LOGIN");
                     command.setArgument("OK");
                     new File("cache" + "\\" + request.getArgument()).mkdir();
-                    this.createDefFile(request);
+                    this.createDefFile(request.getArgument());
                     this.sendobject(command);
                     this.addr=request.getArgument();
                     this.speed=request.getSpeed();
