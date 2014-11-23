@@ -7,25 +7,18 @@
 package clientui;
 
 import cmd.cmd;
-import java.awt.Dialog;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import java.io.*;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.util.Arrays;
-import static java.util.Collections.list;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.FileChooser;
 
 /**
@@ -50,36 +43,47 @@ public class FXMLDocumentController implements Initializable {
     private Label downloadStatus;
     @FXML
     private Label sendStatus;
-    @FXML
-    private final ListView<String> listUser;
+    
     @FXML
     private final ListView<String> listFile;
+    @FXML
+    private TableView<cmd> tableUser;
+    private TableColumn<cmd,String> name;
+    private TableColumn<cmd,String> ip;
+    private TableColumn<cmd,String> login;
+    @FXML
+    private TableView<cmd> tableFile;
+    private TableColumn<cmd,String> nameFile;
+    private TableColumn<cmd,String> size;
+    private TableColumn<cmd,String> lastModified;
+    
     @FXML
     private ProgressBar pBar;
     @FXML
     private ProgressBar pBarF;
     @FXML
+    private Button connect;
+    @FXML
     private ComboBox speedSelected;
-    private ObservableList<String> names;
+    private ObservableList<cmd> alluser;
+    private ObservableList<cmd> allfile;
     private ObservableList<String> files;
-    private ObjectInputStream objectinput;
+   
     private socketio sockclient;
     private File file;
     cmd command;
     cmd response;
     
+    
     public FXMLDocumentController() {
       
-        this.listUser = new ListView<>();
+        
         this.listFile = new ListView<>();
+        tableUser =new TableView<>();
+        tableFile=new TableView<>();
         command = new cmd();
-        threadable music =new threadable("MUSIC");
-        Thread playmusic=new Thread(music);
-        playmusic.start();
-        speedSelected =new ComboBox();
         
-        
-       
+         
     }
     
     @FXML
@@ -88,13 +92,15 @@ public class FXMLDocumentController implements Initializable {
         try {
             sendStatus.setText("Mengirim file...");
             sendStatus.setVisible(true);
+            sendSukses.setVisible(false);
+            
             if(file==null)
             {
                 System.out.println("file kosong\n");
                 sendStatus.setText("File belum diinputkan");
             }
             
-            else if(listUser.getSelectionModel().getSelectedItem()==null)
+            else if(tableUser.getSelectionModel().isEmpty())
             {
                 System.out.println("tujuan kosong\n");
                 sendStatus.setText("Pilih tujuan pengiriman");
@@ -102,8 +108,9 @@ public class FXMLDocumentController implements Initializable {
             else
             {
                 command.setCommand("SEND");
-                command.setArgument(listUser.getSelectionModel().getSelectedItem());
+                command.setArgument(tableUser.getSelectionModel().getSelectedItem().getNamaUser());
                 String tujuan =command.getArgument();
+                System.out.println(tujuan);
                 command.setNameFile(file.getName());
                 this.sockclient.sendobject(command);
                 response =(cmd) sockclient.readobject();
@@ -139,10 +146,64 @@ public class FXMLDocumentController implements Initializable {
             System.out.println("file gagal");
         }
     }
+    
+    @FXML
+    public void sendBroadcast() 
+    {
+        try {
+            sendStatus.setText("Mengirim file...");
+            sendStatus.setVisible(true);
+            sendSukses.setVisible(false);
+            
+            if(file==null)
+            {
+                System.out.println("file kosong\n");
+                sendStatus.setText("File belum diinputkan");
+            }
+            else
+            {
+                command.setCommand("SEND");
+                command.setArgument("BROADCAST");
+                String tujuan ="BROADCAST";
+                
+                command.setNameFile(file.getName());
+                this.sockclient.sendobject(command);
+                response =(cmd) sockclient.readobject();
+                if(response.getCommand().equals("SEND") && response.getArgument().equals("OK"))
+                {
+                    
+                    command.setCommand("SEND");
+                    command.setArgument("START");
+                    command.setNameFile(file.getName());
+                    this.sendSukses.setText("File terkirim ke semua yang sedang aktif" );
+                    this.sendSukses.setVisible(false);
+                    this.sockclient.sendobject(command);
+                    threadable sendbffile = new threadable(sockclient, file, command,pBar,tujuan,sendStatus,sendSukses,"SEND");
+                    Thread sendf=new Thread(sendbffile);
+                    sendf.start();
+                    pBar.setVisible(true);
+                }
+                
+            }
+            
+        } catch (IOException |ClassNotFoundException|OutOfMemoryError ex) {
+            Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
+            command.setCommand("SEND");
+            command.setArgument("FAILED");
+            try {
+                this.sockclient.sendobject(command);
+            } catch (IOException ex1) {
+                Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex1);
+            }
+            sendStatus.setText("File terlalu besar, tidak boleh melebihi 500 MB");
+            System.out.println("file gagal");
+        }
+    }
     @FXML
     public void download()
     {
-        if(this.listFile.getSelectionModel().getSelectedItem()==null)
+        downloadSukses.setVisible(false);
+        if(tableFile.getSelectionModel().isEmpty())
         {
             downloadStatus.setText("Pilih file yang akan didownload");
         }
@@ -151,17 +212,17 @@ public class FXMLDocumentController implements Initializable {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Resource File");
             System.out.println("ok");
-            fileChooser.setInitialFileName(this.listFile.getSelectionModel().getSelectedItem());
+            //fileChooser.setInitialFileName(this.listFile.getSelectionModel().getSelectedItem());
             file = fileChooser.showSaveDialog(null);
             System.out.println(file.getAbsolutePath());
 
         }
-        if(this.listFile.getSelectionModel().getSelectedItem()!=null)
+        if(!tableFile.getSelectionModel().isEmpty())
         {
             cmd command=new cmd();
             command.setCommand("DOWNLOAD");
             command.setArgument("FILE");
-            command.setNameFile(this.listFile.getSelectionModel().getSelectedItem());
+            command.setNameFile(tableFile.getSelectionModel().getSelectedItem().getNameFile());
             
             try {
                 this.sockclient.sendobject(command);
@@ -169,13 +230,13 @@ public class FXMLDocumentController implements Initializable {
                 downloadStatus.setText("");
                 if(response.getCommand().equals("DOWNLOAD") && response.getArgument().equals("OK"))
                 {
-                    downloadStatus.setText("Download Sedang diproses....");
+                    
                     downloadStatus.setVisible(true);
                     threadable downfile = new threadable(sockclient, file,pBarF,downloadStatus,downloadSukses,"DOWNLOAD");
                     Thread sendf=new Thread(downfile);
                     sendf.start();
                     downloadSukses.setText("Download Selesai");
-                    downloadSukses.setVisible(false);
+                    
                     pBarF.setVisible(true);
                 }
             } catch (ClassNotFoundException |IOException ex ) {
@@ -197,6 +258,7 @@ public class FXMLDocumentController implements Initializable {
         sendStatus.setText("File " + file.getName() +" siap dikirim");
         
         
+        
     }
     
     @FXML
@@ -204,8 +266,10 @@ public class FXMLDocumentController implements Initializable {
     {
         command.setCommand("LIST");
         command.setArgument("USER");
-        this.names =listUser.getItems();
-        names.clear();
+        
+        
+        alluser=tableUser.getItems();
+        alluser.clear();
         try {
             sockclient.sendobject(command);
             response =(cmd) sockclient.readobject();
@@ -215,12 +279,15 @@ public class FXMLDocumentController implements Initializable {
         
         if(response.getCommand().equals("LIST") && response.getArgument().equals("USER OK"))
         {
-             List<String> list;
-             list =new ArrayList<>();
+            ArrayList<cmd> list;
             try {
-                list = sockclient.getList();
+                list = sockclient.getListUser();
+                                
+                alluser.addAll(list);
+                System.out.println(list.get(0).getLoginDate());
+                tableUser.setItems(alluser);              
+                tableUser.getColumns().setAll(name,ip,login);
                 
-                names.addAll(list);
             } catch (IOException ex) {
                 Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -231,8 +298,9 @@ public class FXMLDocumentController implements Initializable {
     {
         command.setCommand("LIST");
         command.setArgument("FILE");
-        this.files =listFile.getItems();
-        files.clear();
+
+        allfile=tableFile.getItems();
+        allfile.clear();
         try {
             sockclient.sendobject(command);
             response =(cmd) sockclient.readobject();
@@ -242,12 +310,15 @@ public class FXMLDocumentController implements Initializable {
         
         if(response.getCommand().equals("LIST") && response.getArgument().equals("FILE OK"))
         {
-             List<String> list;
-             list =new ArrayList<>();
+             
+              ArrayList<cmd> list;
             try {
-                list = sockclient.getList();
+                list = sockclient.getListFile();
+                allfile.addAll(list);
                 
-                files.addAll(list);
+                tableFile.setItems(allfile);              
+                tableFile.getColumns().setAll(nameFile,size,lastModified);
+                
             } catch (IOException ex) {
                 Logger.getLogger(FXMLDocumentController.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -261,6 +332,7 @@ public class FXMLDocumentController implements Initializable {
         this.portServer.setDisable(false);
         this.nameUser.setDisable(false);
         this.speedSelected.setDisable(false);
+        this.connect.setDisable(false);
         this.status.setText("Koneksi Terputus");
     }
     @FXML
@@ -268,27 +340,29 @@ public class FXMLDocumentController implements Initializable {
     {
         int speedchoice=1024;
         String speed =speedSelected.getSelectionModel().getSelectedItem().toString();
-        if(speed.equals("normal"))
+        if(speed.equals("Lambat"))
         {
             speedchoice=1024;
         }
-        else if(speed.equals("2x"))
+        else if(speed.equals("Normal"))
         {
             speedchoice=2048;
         }
-        else if(speed.equals("10x"))
+        else if(speed.equals("Cepat"))
+        {
+            speedchoice=5012;
+        }
+        else if(speed.equals("Super Cepat"))
         {
             speedchoice=10240;
-        }
-        else if(speed.equals("100x"))
-        {
-            speedchoice=102400;
         }
         
         ipServer.setDisable(true);
         portServer.setDisable(true);
         speedSelected.setDisable(true);
         nameUser.setDisable(true);
+        connect.setDisable(true);
+        
         List<String> list;
         String nama ="anonymous";
         cmd command =new cmd();
@@ -318,8 +392,30 @@ public class FXMLDocumentController implements Initializable {
     @Override
     @SuppressWarnings("empty-statement")
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO      
+        // TODO
+        name=new TableColumn<>("Nama");
+        ip=new TableColumn<>("IP");
+        login=new TableColumn<>("Login time");
+        name.setCellValueFactory(new PropertyValueFactory("namaUser"));
+        ip.setCellValueFactory(new PropertyValueFactory("ip"));
+        login.setCellValueFactory(new PropertyValueFactory("loginDate"));
+        tableUser.setPlaceholder(new ProgressBar());
+       
+        tableUser.getColumns().setAll(name,ip,login);
+        
+        nameFile=new TableColumn<>("Name File");
+        size=new TableColumn<>("Size");
+        lastModified=new TableColumn<>("Last Modified");
+        nameFile.setCellValueFactory(new PropertyValueFactory("nameFile"));
+        size.setCellValueFactory(new PropertyValueFactory("fileSize"));
+        lastModified.setCellValueFactory(new PropertyValueFactory("lastModified"));
+        tableFile.setPlaceholder(new ProgressBar());
+       
+        tableFile.getColumns().setAll(nameFile,size,lastModified);
+        
         
     }    
+
+    
     
 }
